@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>GCode to SVG</title>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/4.1.1/normalize.min.css">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/foundation/6.2.3/foundation.min.css">
+	<link rel="stylesheet" href="style.css">
+</head>
+<body>
+	<div class="container">
+		<div class="title">GCode to SVG</div>
+		<div class="gcode">
+			<label for="gcode">Add your gcode here.</label>
+			<textarea id="gcode"></textarea>
+			<button class="button generate">Plot Tool Paths</button>
+		</div>
+		<div class="svg">
+			<svg xmlns="http://www.w3.org/2000/svg">
+			</svg>
+		</div>
+	</div>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+	<script src="gcode_to_svg.js"></script>
+	<script src="default.js"></script>
+</body>
+</html>
