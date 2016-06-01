@@ -8,7 +8,7 @@ $(document).ready(function() {
 	
 	// Draw major grid lines.
 	for (var i = 0; i < 10; i++) {
-		var spacing = 20,
+		var spacing = 50,
 			h_x1 = 0,
 			h_y1 = i * spacing,
 			h_x2 = svg.width(),
