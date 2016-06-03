@@ -1,0 +1,32 @@
+{
+  "name": "gcode_to_svg",
+  "version": "1.0.0",
+  "description": "Convert GCode tool paths to SVG for tool path viewing.",
+  "main": "gcode_to_svg.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cbuchert/gcode_to_svg.git"
+  },
+  "keywords": [
+    "gcode",
+    "svg"
+  ],
+  "author": "Christian Buchert",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/cbuchert/gcode_to_svg/issues"
+  },
+  "homepage": "https://github.com/cbuchert/gcode_to_svg#readme",
+  "dependencies": {
+    "foundation-sites": "^6.2.3",
+    "jquery": "^2.2.4",
+    "normalize-css": "^2.3.1",
+    "snapsvg": "^0.4.0"
+  },
+  "devDependencies": {
+    "gulp": "^3.9.1"
+  }
+}
