@@ -5,7 +5,7 @@
 	<title>GCode to SVG</title>
 	<link rel="stylesheet" href="../node_modules/normalize-css/normalize.css">
 	<link rel="stylesheet" href="../node_modules/foundation-sites/dist/foundation.min.css">
-	<link rel="stylesheet" href="style.css">
+	<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 	<div class="container">
@@ -16,13 +16,13 @@
 			<button class="button generate">Plot Tool Paths</button>
 		</div>
 		<div class="svg">
-			<svg xmlns="http://www.w3.org/2000/svg">
+			<svg id="svg" xmlns="http://www.w3.org/2000/svg">
 			</svg>
 		</div>
 	</div>
 	<script src="../node_modules/jquery/dist/jquery.min.js"></script>
 	<script src="../node_modules/snapsvg/dist/snap.svg-min.js"></script>
-	<script src="../gcode_to_svg.js"></script>
-	<script src="default.js"></script>
+	<script src="../build/gcode_to_svg.js"></script>
+	<script src="js/default.js"></script>
 </body>
 </html>
