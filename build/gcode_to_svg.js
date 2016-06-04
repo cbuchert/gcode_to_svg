@@ -1,3 +1,63 @@
+var gcode_to_svg = function(gcodeId, svgId) {
+	var gcode = document.getElementById(gcodeId),
+		s = Snap(svgId);
+
+	/*
+	Library variables, their getters, and their setters.
+	 */
+	
+	// The units of measure.
+	var units = '';
+	this.getUnits = function() {
+		return units;
+	};
+	this.setUnits = function(newUnits) {
+		units = newUnits;
+	};
+
+	// The current work plane.
+	var workPlane = '';
+	this.getWorkPlane = function() {
+		return workPlane;
+	};
+	this.setWorkPlane = function(newWorkPlane) {
+		workPlane = newWorkPlane;
+	};
+
+	// The state of the coolant system.
+	var coolantState = '';
+	this.getCoolantState = function() {
+		return coolantState;
+	};
+	this.setCoolantState = function(newCoolantState) {
+		coolantState = newCoolantState;
+	};
+
+	// The pallet clamp state.
+	var palletClampState = '';
+	this.getPalletClampState = function() {
+		return palletClampState;
+	};
+	this.setPalletClampState = function(newPalletClampState) {
+		palletClampState = newPalletClampState;
+	};
+
+	// The lathe spindle.
+	var spindleState = 'off',
+		spindleRotation = 'clockwise';
+	var getSpindleState = function() {
+		return spindleState;
+	};
+	var getSpindleRotation = function() {
+		return spindleRotation;
+	};
+	var setSpindleState = function(newSpindleState) {
+		spindleState = newSpindleState;
+	};
+	var setSpindleRotation = function(newSpindleRotation) {
+		spindleRotation = newSpindleRotation;
+	};
+
     var gcodes = {
         "G00": {
             "Description": "Rapid positioning",
@@ -639,3 +699,554 @@
             }
         }
     };
+
+    var mcodes = {
+        "M00": {
+            "Description": "Compulsory stop",
+            "Milling ( M )": "M",
+            "Turning ( T )": "T",
+            "Corollary info": "Non-optional—machine will always stop upon reaching M00 in the program  execution.",
+            'action': function() {
+                
+            }
+        },
+        "M01": {
+            "Description": "Optional stop",
+            "Milling ( M )": "M",
+            "Turning ( T )": "T",
+            "Corollary info": "Machine will only stop at M01 if operator has pushed the optional stop  button.",
+            'action': function() {
+                
+            }
+        },
+        "M02": {
+            "Description": "End of program",
+            "Milling ( M )": "M",
+            "Turning ( T )": "T",
+            "Corollary info": "Program ends; execution may or may not return to program top (depending on  the control); may or may not reset register values. M02 was the original  program-end code, now considered obsolete, but still supported for backward  compatibility.[7] Many modern controls treat M02 as equivalent to M30.[7]  See M30 for additional discussion of control status upon executing M02 or  M30.",
+            'action': function() {
+                
+            }
+        },
+        "M03": {
+            "Description": "Spindle on (clockwise rotation)",
+            "Milling ( M )": "M",
+            "Turning ( T )": "T",
+            "Corollary info": "The speed of the spindle is determined by the address S, in either revolutions  per minute (G97 mode; default) or surface feet per minute or [surface]  meters per minute (G96 mode [CSS] under either G20 or G21). The right-hand  rule can be used to determine which direction is clockwise and which  direction is counter-clockwise.   Right-hand-helix screws moving in the tightening direction (and  right-hand-helix flutes spinning in the cutting direction) are defined as  moving in the M03 direction, and are labeled \"clockwise\" by convention. The  M03 direction is always M03 regardless of local vantage point and local  CW/CCW distinction.",
+            'action': function() {
+                spindleRotation = 'clockwise';
+            }
+        },
+        "M04": {
+            "Description": "Spindle on (counterclockwise rotation)",
+            "Milling ( M )": "M",
+            "Turning ( T )": "T",
+            "Corollary info": "See comment above at M03.",
+            'action': function() {
+                spindleRotation = 'counterclockwise';
+            }
+        },
+        "M05": {
+            "Description": "Spindle stop",
+            "Milling ( M )": "M",
+            "Turning ( T )": "T",
+            "Corollary info": "",
+            'action': function() {
+                spindleState = 'off';
+            }
+        },
+        "M06": {
+            "Description": "Automatic tool change (ATC)",
+            "Milling ( M )": "M",
+            "Turning ( T )": "T (some-times)",
+            "Corollary info": "Many lathes do not use M06 because the T address itself indexes the turret. Programming on any particular machine tool requires knowing which method  that machine uses. To understand how the T address works and how it  interacts (or not) with M06, one must study the various methods, such as  lathe turret programming, ATC fixed tool selection, ATC random memory tool  selection, the concept of \"next tool waiting\", and empty tools. These  concepts are taught in textbooks such as Smid,[3] and online multimedia  (videos, simulators, etc.); all of these teaching resources are usually  paywalled to pay back the costs of their development. They are used in  training classes for operators, both on-site and remotely (e.g., Tooling  University).",
+            'action': function() {
+                
+            }
+        },
+        "M07": {
+            "Description": "Coolant on (mist)",
+            "Milling ( M )": "M",
+            "Turning ( T )": "T",
+            "Corollary info": "",
+            'action': function() {
+                coolantState = 'mist';
+            }
+        },
+        "M08": {
+            "Description": "Coolant on (flood)",
+            "Milling ( M )": "M",
+            "Turning ( T )": "T",
+            "Corollary info": "",
+            'action': function() {
+                coolantState = 'flood';
+            }
+        },
+        "M09": {
+            "Description": "Coolant off",
+            "Milling ( M )": "M",
+            "Turning ( T )": "T",
+            "Corollary info": "",
+            'action': function() {
+                coolantState = 'off';
+            }
+        },
+        "M10": {
+            "Description": "Pallet clamp on",
+            "Milling ( M )": "M",
+            "Turning ( T )": "",
+            "Corollary info": "For machining centers with pallet changers",
+            'action': function() {
+                palletClampState = 'on';
+            }
+        },
+        "M11": {
+            "Description": "Pallet clamp off",
+            "Milling ( M )": "M",
+            "Turning ( T )": "",
+            "Corollary info": "For machining centers with pallet changers",
+            'action': function() {
+                palletClampState = off;
+            }
+        },
+        "M13": {
+            "Description": "Spindle on (clockwise rotation) and coolant on (flood)",
+            "Milling ( M )": "M",
+            "Turning ( T )": "",
+            "Corollary info": "This one M-code does the work of both M03 and M08. It is not unusual for  specific machine models to have such combined commands, which make for  shorter, more quickly written programs.",
+            'action': function() {
+                spindleState = 'on';
+                spindleRotation = 'clockwise';
+                coolantState = 'flood';
+            }
+        },
+        "M19": {
+            "Description": "Spindle orientation",
+            "Milling ( M )": "M",
+            "Turning ( T )": "T",
+            "Corollary info": "Spindle orientation is more often called within cycles (automatically) or  during setup (manually), but it is also available under program control via  *M19*. The abbreviation OSS (oriented spindle stop) may be seen in  reference to an oriented stop within cycles.   The relevance of spindle orientation has increased as technology has  advanced. Although 4- and 5-axis contour milling and CNC single-pointing  have depended on spindle position encoders for decades, before the advent  of widespread live tooling and mill-turn/turn-mill systems, it was seldom  relevant in \"regular\" (non-\"special\") machining for the operator (as  opposed to the machine) to know the angular orientation of a spindle except  for within a few restricted contexts (such as tool change, or G76 fine  boring cycles with choreographed tool retraction). Most milling of features  indexed around a turned workpiece was accomplished with separate operations  on indexing head setups; in a sense, indexing heads were invented as  separate pieces of equipment, to be used in separate operations, which  could provide precise spindle orientation in a world where it otherwise  mostly didn't exist (and didn't need to). But as CAD/CAM and multiaxis CNC  machining with multiple rotary-cutter axes becomes the norm, even for  \"regular\" (non-\"special\") applications, machinists now frequently care  about stepping just about *any* spindle through its 360° with precision.",
+            'action': function() {
+                
+            }
+        },
+        "M21": {
+            "Description": "Tailstock forward",
+            "Milling ( M )": "",
+            "Turning ( T )": "T",
+            "Corollary info": "",
+            'action': function() {
+                
+            }
+        },
+        "M22": {
+            "Description": "Tailstock backward",
+            "Milling ( M )": "",
+            "Turning ( T )": "T",
+            "Corollary info": "",
+            'action': function() {
+                
+            }
+        },
+        "M23": {
+            "Description": "Thread gradual pullout ON",
+            "Milling ( M )": "",
+            "Turning ( T )": "T",
+            "Corollary info": "",
+            'action': function() {
+                
+            }
+        },
+        "M24": {
+            "Description": "Thread gradual pullout OFF",
+            "Milling ( M )": "",
+            "Turning ( T )": "T",
+            "Corollary info": "",
+            'action': function() {
+                
+            }
+        },
+        "M30": {
+            "Description": "End of program, with return to program top",
+            "Milling ( M )": "M",
+            "Turning ( T )": "T",
+            "Corollary info": "Today M30 is considered the standard program-end code, and will return  execution to the top of the program. Today most controls also still support  the original program-end code, M02, usually by treating it as equivalent to  M30. *Additional info:* Compare M02 with M30. First, M02 was created, in  the days when the punched tape was expected to be short enough to be  spliced into a continuous loop (which is why on old controls, M02 triggered  no tape rewinding).[7] The other program-end code, M30, was added later to  accommodate longer punched tapes, which were wound on a reel and thus  needed rewinding before another cycle could start.[7] On many newer  controls, there is no longer a difference in how the codes are  executed—both act like M30.",
+            'action': function() {
+                
+            }
+        },
+        "M41": {
+            "Description": "Gear select – gear 1",
+            "Milling ( M )": "",
+            "Turning ( T )": "T",
+            "Corollary info": "",
+            'action': function() {
+                
+            }
+        },
+        "M42": {
+            "Description": "Gear select – gear 2",
+            "Milling ( M )": "",
+            "Turning ( T )": "T",
+            "Corollary info": "",
+            'action': function() {
+                
+            }
+        },
+        "M43": {
+            "Description": "Gear select – gear 3",
+            "Milling ( M )": "",
+            "Turning ( T )": "T",
+            "Corollary info": "",
+            'action': function() {
+                
+            }
+        },
+        "M44": {
+            "Description": "Gear select – gear 4",
+            "Milling ( M )": "",
+            "Turning ( T )": "T",
+            "Corollary info": "",
+            'action': function() {
+                
+            }
+        },
+        "M48": {
+            "Description": "Feedrate override allowed",
+            "Milling ( M )": "M",
+            "Turning ( T )": "T",
+            "Corollary info": "",
+            'action': function() {
+                
+            }
+        },
+        "M49": {
+            "Description": "Feedrate override NOT allowed",
+            "Milling ( M )": "M",
+            "Turning ( T )": "T",
+            "Corollary info": "Prevent MFO. This rule is also usually called (automatically) within  tapping cycles or single-point threading cycles, where feed is precisely  correlated to speed. Same with spindle speed override (SSO) and feed hold  button. Some controls are capable of providing SSO and MFO during threading.",
+            'action': function() {
+                
+            }
+        },
+        "M52": {
+            "Description": "Unload Last tool from spindle",
+            "Milling ( M )": "M",
+            "Turning ( T )": "T",
+            "Corollary info": "Also empty spindle.",
+            'action': function() {
+                
+            }
+        },
+        "M60": {
+            "Description": "Automatic pallet change (APC)",
+            "Milling ( M )": "M",
+            "Turning ( T )": "",
+            "Corollary info": "For machining centers with pallet changers",
+            'action': function() {
+                
+            }
+        },
+        "M98": {
+            "Description": "Subprogram call",
+            "Milling ( M )": "M",
+            "Turning ( T )": "T",
+            "Corollary info": "Takes an address P to specify which subprogram to call, for example, \"M98  P8979\" calls subprogram O8979.",
+            'action': function() {
+                
+            }
+        },
+        "M99": {
+            "Description": "Subprogram end",
+            "Milling ( M )": "M",
+            "Turning ( T )": "T",
+            "Corollary info": "Usually placed at end of subprogram, where it returns execution control to  the main program. The default is that control returns to the block  following the M98 call in the main program. Return to a different block  number can be specified by a P address. M99 can also be used in main  program with block skip for endless loop of main program on bar work on  lathes (until operator toggles block skip).",
+            'action': function() {
+                
+            }
+        }
+    };
+
+    var letterAddresses = {
+        "A": {
+            "Description": "Absolute or incremental position of A axis (rotational axis around X axis)",
+            "Corollary info": "",
+            "action": function() {
+
+            }
+        },
+        "B": {
+            "Description": "Absolute or incremental position of B axis (rotational axis around Y axis)",
+            "Corollary info": "",
+            "action": function() {
+
+            }
+        },
+        "C": {
+            "Description": "Absolute or incremental position of C axis (rotational axis around Z axis)",
+            "Corollary info": "",
+            "action": function() {
+
+            }
+        },
+        "D": {
+            "Description": "Defines diameter or radial offset used for cutter compensation. D is used for depth of cut on lathes. It is used for aperture selection and commands on photoplotters.",
+            "Corollary info": "",
+            "action": function() {
+
+            }
+        },
+        "E": {
+            "Description": "Precision feedrate for threading on lathes",
+            "Corollary info": "",
+            "action": function() {
+
+            }
+        },
+        "F": {
+            "Description": "Defines feed rate",
+            "Corollary info": "Common units are distance per time for mills (inches per minute, IPM, or millimeters per minute, mm/min) and distance per revolution for lathes (inches per revolution, IPR, or millimeters per revolution, mm/rev)",
+            "action": function() {
+
+            }
+        },
+        "*G*": {
+            "Description": "Address for preparatory commands",
+            "Corollary info": "G commands often tell the control what kind of motion is wanted (e.g., rapid positioning, linear feed, circular feed, fixed cycle) or what offset value to use.",
+            "action": function() {
+
+            }
+        },
+        "H": {
+            "Description": "Defines tool length offset; Incremental axis corresponding to C axis (e.g., on a turn-mill)",
+            "Corollary info": "",
+            "action": function() {
+
+            }
+        },
+        "I": {
+            "Description": "Defines arc center in X axis for G02 or G03 arc commands. Also used as a parameter within some fixed cycles.",
+            "Corollary info": "",
+            "action": function() {
+
+            }
+        },
+        "J": {
+            "Description": "Defines arc center in Y axis for G02 or G03 arc commands. Also used as a parameter within some fixed cycles.",
+            "Corollary info": "",
+            "action": function() {
+
+            }
+        },
+        "K": {
+            "Description": "Defines arc center in Z axis for G02 or G03 arc commands. Also used as a parameter within some fixed cycles, equal to L address.",
+            "Corollary info": "",
+            "action": function() {
+
+            }
+        },
+        "L": {
+            "Description": "Fixed cycle loop count; Specification of what register to edit using G10",
+            "Corollary info": "*Fixed cycle loop count:* Defines number of repetitions (\"loops\") of a fixed cycle at *each* position. Assumed to be 1 unless programmed with another integer. Sometimes the K address is used instead of L. With incremental positioning (G91), a series of equally spaced holes can be programmed as a loop rather than as individual positions. *G10 use:* Specification of what register to edit (work offsets, tool radius offsets, tool length offsets, etc.).",
+            "action": function() {
+
+            }
+        },
+        "*M*": {
+            "Description": "Miscellaneous function",
+            "Corollary info": "Action code, auxiliary command; descriptions vary. Many M-codes call for machine functions, which is why people often say that the \"M\" stands for \"machine\", although it was not intended to.",
+            "action": function() {
+
+            }
+        },
+        "N": {
+            "Description": "Line (block) number in program; System parameter number to be changed using G10",
+            "Corollary info": "*Line (block) numbers:* Optional, so often omitted. Necessary for certain tasks, such as M99 P address (to tell the control which block of the program to return to if not the default one) or GoTo statements (if the control supports those). N numbering need not increment by 1 (for example, it can increment by 10, 20, or 1000) and can be used on every block or only in certain spots throughout a program. *System parameter number:* G10 allows changing of system parameters under program control.",
+            "action": function() {
+
+            }
+        },
+        "O": {
+            "Description": "Program name",
+            "Corollary info": "For example, O4501. For many years it was common for CNC control displays to use slashed zero glyphs to ensure effortless distinction of letter \"O\" from digit \"0\". Today's GUI controls often have a choice of fonts, like a PC does.",
+            "action": function() {
+
+            }
+        },
+        "P": {
+            "Description": "Serves as parameter address for various G and M codes",
+            "Corollary info": "- With G04, defines dwell time value. - Also serves as a parameter in some canned cycles, representing dwell times or other variables. - Also used in the calling and termination of subprograms. (With M98, it specifies which subprogram to call; with M99, it specifies which block number of the main program to return to.)",
+            "action": function() {
+
+            }
+        },
+        "Q": {
+            "Description": "Peck increment in canned cycles",
+            "Corollary info": "For example, G73, G83 (peck drilling cycles)",
+            "action": function() {
+
+            }
+        },
+        "R": {
+            "Description": "Defines size of arc radius, or defines retract height in milling canned cycles",
+            "Corollary info": "For radii, not all controls support the R address for G02 and G03, in which case IJK vectors are used. For retract height, the \"R level\", as it's called, is returned to if G99 is programmed.",
+            "action": function() {
+
+            }
+        },
+        "S": {
+            "Description": "Defines speed, either spindle speed or surface speed depending on mode",
+            "Corollary info": "Data type = integer. In G97 mode (which is usually the default), an integer after S is interpreted as a number of rev/min (rpm). In G96 mode (CSS), an integer after S is interpreted as surface speed—sfm (G20) or m/min (G21). See also Speeds and feeds. On multifunction (turn-mill or mill-turn) machines, which spindle gets the input (main spindle or subspindles) is determined by other M codes.",
+            "action": function() {
+
+            }
+        },
+        "T": {
+            "Description": "Tool selection",
+            "Corollary info": "To understand how the T address works and how it interacts (or not) with M06, one must study the various methods, such as lathe turret programming, ATC fixed tool selection, ATC random memory tool selection, the concept of \"next tool waiting\", and empty tools. Programming on any particular machine tool requires knowing which method that machine uses. Ways of obtaining this training are mentioned in the comments for M06.",
+            "action": function() {
+
+            }
+        },
+        "U": {
+            "Description": "Incremental axis corresponding to X axis (typically only lathe group A controls) Also defines dwell time on some machines (instead of \"P\" or \"X\").",
+            "Corollary info": "In these controls, X and U obviate G90 and G91, respectively. On these lathes, G90 is instead a fixed cycle address for roughing.",
+            "action": function() {
+
+            }
+        },
+        "V": {
+            "Description": "Incremental axis corresponding to Y axis",
+            "Corollary info": "Until the 2000s, the V address was very rarely used, because most lathes that used U and W didn't have a Y-axis, so they didn't use V. (Green *et al.* 1996[5] did not even list V in their table of addresses.) That is still often the case, although the proliferation of live lathe tooling and turn-mill machining has made V address usage less rare than it used to be (Smid 2008[3] shows an example). See also G18.",
+            "action": function() {
+
+            }
+            },
+        "W": {
+            "Description": "Incremental axis corresponding to Z axis (typically only lathe group A controls)",
+            "Corollary info": "In these controls, Z and W obviate G90 and G91, respectively. On these lathes, G90 is instead a fixed cycle address for roughing.",
+            "action": function() {
+
+            }
+        },
+        "*X*": {
+            "Description": "Absolute or incremental position of X axis. Also defines dwell time on some machines (instead of \"P\" or \"U\").",
+            "Corollary info": "",
+            "action": function() {
+
+            }
+        },
+        "*Y*": {
+            "Description": "Absolute or incremental position of Y axis",
+            "Corollary info": "",
+            "action": function() {
+
+            }
+        },
+        "*Z*": {
+            "Description": "Absolute or incremental position of Z axis",
+            "Corollary info": "The main spindle's axis of rotation often determines which axis of a machine tool is labeled as Z.",
+            "action": function() {
+
+            }
+        }
+    };
+	this.parseGCode = function() {
+		gcode = document.getElementById('gcode').value.split('\n');
+
+		gcode.forEach(function(line) {
+			line = line.split(' ');
+			line.forEach(function(code) {
+				switch (code[0]) {
+					case 'A':
+						break;
+
+					case 'B':
+						break;
+
+					case 'C':
+						break;
+
+					case 'D':
+						break;
+
+					case 'E':
+						break;
+
+					case 'F':
+						break;
+
+					case 'G':
+						if (! gcodes.hasOwnProperty(code)) {
+
+						} else {
+							console.log(code + ': ' + gcodes[code].Description);
+							gcodes[code].action();
+						}
+
+						break;
+
+					case 'H':
+						break;
+
+					case 'I':
+						break;
+
+					case 'J':
+						break;
+
+					case 'K':
+						break;
+
+					case 'L':
+						break;
+
+					case 'M':
+						console.log(code + ' is a mcode.');
+						break;
+
+					case 'N':
+						break;
+
+					case 'O':
+						break;
+
+					case 'P':
+						break;
+
+					case 'Q':
+						break;
+
+					case 'R':
+						break;
+
+					case 'S':
+						break;
+
+					case 'T':
+						break;
+
+					case 'U':
+						break;
+
+					case 'V':
+						break;
+
+					case 'W':
+						break;
+
+					case 'X':
+						break;
+
+					case 'Y':
+						break;
+
+					case 'Z':
+						break;
+
+					default:
+						break;
+				}
+			});
+		});
+	}
+};

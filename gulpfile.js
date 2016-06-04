@@ -1,7 +1,7 @@
 var gulp = require('gulp'),
 	concat = require('gulp-concat');
 
-gulp.task('concat', function() {
+gulp.task('default', function() {
 	return gulp.src(['src/head.js',
 					 'src/gcodes.js',
 					 'src/mcodes.js',
