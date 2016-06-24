@@ -1,9 +1,6 @@
-var drawSVG = new gcode_to_svg,
+var drawSVG = new gcode_to_svg('#svg'),
 	s = Snap('#svg'),
 	gcode = '';
-
-var circle = s.circle(150, 150, 100);
-circle.addClass('grid-major');
 
 document.getElementById('generate').onclick = function() {
 	drawSVG.parseGCode();

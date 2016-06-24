@@ -25,10 +25,10 @@
 
 					case 'G':
 						if (! gcodes.hasOwnProperty(code)) {
-
+							console.log('Error: No such code as ' + code);
 						} else {
-							console.log(code + ': ' + gcodes[code].Description);
-							gcodes[code].action();
+							// console.log(code + ': ' + gcodes[code].Description);
+							gcodes[code].action(cleanComments(line));
 						}
 
 						break;

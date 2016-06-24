@@ -9,8 +9,9 @@
 	display: inline-block;
 }
 
-.svg {
+svg {
 	background-color: #fafafa;
+	height: 20rem;
 }
 
 .grid-major {

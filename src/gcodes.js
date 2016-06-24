@@ -4,8 +4,10 @@
             "Milling ( M )": "M",
             "Turning ( T )": "T",
             "Corollary info": "On 2- or 3-axis moves, G00 (unlike G01) traditionally does not necessarily  move in a single straight line between start point and end point. It moves  each axis at its max speed until its vector quantity is achieved. Shorter  vector usually finishes first (given similar axis speeds). This matters  because it may yield a dog-leg or hockey-stick motion, which the programmer  needs to consider depending on what obstacles are nearby, to avoid a crash.  Some machines offer interpolated rapids as a feature for ease of  programming (safe to assume a straight line).",
-            "action": function(){
-                
+            "action": function(line){
+                setToolHeadPosition(getXYZ(line));
+                // console.log('Tool head position set.');
+                // console.log(getToolHeadPosition());
             }
         },
         "G01": {
@@ -13,8 +15,19 @@
             "Milling ( M )": "M",
             "Turning ( T )": "T",
             "Corollary info": "The most common workhorse code for feeding during a cut. The program specs  the start and end points, and the control automatically calculates ( interpolates) the intermediate points to pass through that will yield a  straight line (hence \"linear\"). The control then calculates the angular  velocities at which to turn the axis leadscrews via their servomotors or  stepper motors. The computer performs thousands of calculations per second,  and the motors react quickly to each input. Thus the actual toolpath of the  machining takes place with the given feedrate on a path that is accurately  linear to within very small limits.",
-            "action": function(){
-                
+            "action": function(line){
+                var destinationCoords = getXYZ(line);
+                // console.log('\tLinear interpolation from');
+                // console.log(toolHeadPosition);
+                // console.log('\tto');
+                // console.log(destinationCoords);
+                // console.log('');
+
+                // console.log(toolHeadPosition.x, toolHeadPosition.y, destinationCoords.x, destinationCoords.y);
+                var line = s.line(toolHeadPosition.x, toolHeadPosition.y, destinationCoords.x, destinationCoords.y);
+                line.addClass('grid-major');
+
+                setToolHeadPosition(destinationCoords);
             }
         },
         "G02": {
@@ -22,8 +35,13 @@
             "Milling ( M )": "M",
             "Turning ( T )": "T",
             "Corollary info": "Very similar in concept to G01. Again, the control interpolates  intermediate points and commands the servo- or stepper motors to rotate the  amount needed for the leadscrew to translate the motion to the correct tool  tip positioning. This process repeated thousands of times per minute  generates the desired toolpath. In the case of G02, the interpolation  generates a circle rather than a line. As with G01, the actual toolpath of  the machining takes place with the given feedrate on a path that accurately  matches the ideal (in G02's case, a circle) to within very small limits. In  fact, the interpolation is so precise (when all conditions are correct)  that milling an interpolated circle can obviate operations such as  drilling, and often even fine boring. *Addresses for radius or arc center:*  G02 and G03 take either an R address (for the radius desired on the part)  or IJK addresses (for the component vectors that define the vector from the  arc start point to the arc center point). *Cutter comp:* On most controls  you cannot start G41 or G42 in G02 or G03 modes. You must already have  compensated in an earlier G01 block. Often a short linear lead-in movement  will be programmed, merely to allow cutter compensation before the main  event, the circle-cutting, begins. *Full circles:* When the arc start point  and the arc end point are identical, a 360° arc, a full circle, will be  cut. (Some older controls cannot support this because arcs cannot cross  between quadrants of the cartesian system. Instead, four quarter-circle  arcs are programmed back-to-back.)",
-            "action": function(){
-                
+            "action": function(line){
+                var centerPoint = getXYZ(line),
+                    radiusRawParam = line[line.length - 1];
+                    radius = letterAddresses[radiusRawParam[0]].action(radiusRawParam);
+                // console.log(line);
+                // console.log(centerPoint);
+                // console.log(radius);
             }
         },
         "G03": {
@@ -31,8 +49,15 @@
             "Milling ( M )": "M",
             "Turning ( T )": "T",
             "Corollary info": "Same corollary info as for G02.",
-            "action": function(){
-                
+            "action": function(line){
+                var centerPoint = getXYZ(line),
+                    radiusRawParam = line[line.length - 1];
+                    radius = letterAddresses[radiusRawParam[0]].action(radiusRawParam);
+
+                var circle = s.circle(centerPoint.x, centerPoint.y, radius);
+                circle.addClass('grid-major');
+                // console.log(centerPoint);
+                // console.log(radius);
             }
         },
         "G04": {

@@ -1,11 +1,46 @@
-var gcode_to_svg = function(gcodeId, svgId) {
-	var gcode = document.getElementById(gcodeId),
-		s = Snap(svgId);
+var gcode_to_svg = function(svgId) {
+	var s = Snap(svgId);
+
+	// var circle = s.circle(150, 150, 100);
+	// circle.addClass('grid-major');
 
 	/*
 	Library variables, their getters, and their setters.
 	 */
 	
+	var scaleFactor = 1;
+	this.getScaleFactor = function() {
+		return scaleFactor;
+	}
+	this.setScaleFactor = function(value) {
+		scaleFactor = value;
+	}
+	
+	// The tool head position.
+	var toolHeadPosition = {
+		x: 0,
+		y: 0,
+		z: 10
+	};
+	var getToolHeadPosition = function() {
+		return toolHeadPosition;
+	};
+	var setToolHeadPosition = function(xyz) {
+		for (key in xyz) {
+			switch (key) {
+				case 'x':
+					toolHeadPosition.x = parseFloat(xyz[key]) * scaleFactor;
+					break;
+				case 'y':
+					toolHeadPosition.y = parseFloat(xyz[key]) * scaleFactor;
+					break;
+				case 'z':
+					toolHeadPosition.z = parseFloat(xyz[key]) * scaleFactor;
+					break;
+			}
+		}
+	};
+
 	// The units of measure.
 	var units = '';
 	this.getUnits = function() {
@@ -45,15 +80,49 @@ var gcode_to_svg = function(gcodeId, svgId) {
 	// The lathe spindle.
 	var spindleState = 'off',
 		spindleRotation = 'clockwise';
-	var getSpindleState = function() {
+	this.getSpindleState = function() {
 		return spindleState;
 	};
-	var getSpindleRotation = function() {
+	this.getSpindleRotation = function() {
 		return spindleRotation;
 	};
-	var setSpindleState = function(newSpindleState) {
+	this.setSpindleState = function(newSpindleState) {
 		spindleState = newSpindleState;
 	};
-	var setSpindleRotation = function(newSpindleRotation) {
+	this.setSpindleRotation = function(newSpindleRotation) {
 		spindleRotation = newSpindleRotation;
 	};
+
+	// Clean comments from a line of input
+	function cleanComments(line) {
+		// console.log(typeof line, line.join(' '));
+		line = line.join(' ');
+		if (line.split(';').length > 1) {
+			line = line.split(';')[0];
+		}
+		line = line.split(' ');
+		line.pop();
+
+		return line;
+	}
+
+	// Get clean XYZ coordinates from input.
+	function getXYZ(array) {
+		var xyz = {};
+
+		for (var i = 0; i < array.length; i++) {
+			switch (array[i][0].toLowerCase()) {
+				case 'x':
+					xyz.x = parseFloat(array[i].substring(1, array[i].length)) * scaleFactor;
+					break;
+				case 'y':
+					xyz.y = parseFloat(array[i].substring(1, array[i].length)) * scaleFactor;
+					break;
+				case 'z':
+					xyz.z = parseFloat(array[i].substring(1, array[i].length)) * scaleFactor;
+					break;
+			}
+		}
+
+		return xyz;
+	}

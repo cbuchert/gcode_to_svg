@@ -58,15 +58,15 @@
         "I": {
             "Description": "Defines arc center in X axis for G02 or G03 arc commands. Also used as a parameter within some fixed cycles.",
             "Corollary info": "",
-            "action": function() {
-
+            "action": function(code) {
+                return parseFloat(code.substring(1, code.length)) * scaleFactor;
             }
         },
         "J": {
             "Description": "Defines arc center in Y axis for G02 or G03 arc commands. Also used as a parameter within some fixed cycles.",
             "Corollary info": "",
-            "action": function() {
-
+            "action": function(code) {
+                return parseFloat(code.substring(1, code.length)) * scaleFactor;
             }
         },
         "K": {
