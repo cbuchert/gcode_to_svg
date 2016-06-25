@@ -4,18 +4,19 @@
 	margin-right: auto;
 }
 
-.gcode, .svg {
-	width: 49%;
-	display: inline-block;
-}
-
 svg {
 	background-color: #fafafa;
-	height: 20rem;
+	height: 40rem;
+	width: 100%;
 }
 
 .grid-major {
 	stroke-width: 2px;
 	stroke: rgba(25, 52, 65, 0.25);
 	fill: none;
+}
+
+.toolpath {
+	stroke-width: 1px;
+	stroke: rgba(145, 170, 157, 1);
 }

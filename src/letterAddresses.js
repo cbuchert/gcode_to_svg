@@ -37,11 +37,12 @@
         "F": {
             "Description": "Defines feed rate",
             "Corollary info": "Common units are distance per time for mills (inches per minute, IPM, or millimeters per minute, mm/min) and distance per revolution for lathes (inches per revolution, IPR, or millimeters per revolution, mm/rev)",
-            "action": function() {
-
+            "action": function(value) {
+                feedRate = scale(parseFloat(value));
+                // console.log('Feedrate set to ' + feedRate);
             }
         },
-        "*G*": {
+        "G": {
             "Description": "Address for preparatory commands",
             "Corollary info": "G commands often tell the control what kind of motion is wanted (e.g., rapid positioning, linear feed, circular feed, fixed cycle) or what offset value to use.",
             "action": function() {
@@ -59,14 +60,14 @@
             "Description": "Defines arc center in X axis for G02 or G03 arc commands. Also used as a parameter within some fixed cycles.",
             "Corollary info": "",
             "action": function(code) {
-                return parseFloat(code.substring(1, code.length)) * scaleFactor;
+                return scale(parseFloat(code.substring(1, code.length)));
             }
         },
         "J": {
             "Description": "Defines arc center in Y axis for G02 or G03 arc commands. Also used as a parameter within some fixed cycles.",
             "Corollary info": "",
             "action": function(code) {
-                return parseFloat(code.substring(1, code.length)) * scaleFactor;
+                return scale(parseFloat(code.substring(1, code.length)));
             }
         },
         "K": {
@@ -83,7 +84,7 @@
 
             }
         },
-        "*M*": {
+        "M": {
             "Description": "Miscellaneous function",
             "Corollary info": "Action code, auxiliary command; descriptions vary. Many M-codes call for machine functions, which is why people often say that the \"M\" stands for \"machine\", although it was not intended to.",
             "action": function() {
@@ -160,21 +161,21 @@
 
             }
         },
-        "*X*": {
+        "X": {
             "Description": "Absolute or incremental position of X axis. Also defines dwell time on some machines (instead of \"P\" or \"U\").",
             "Corollary info": "",
             "action": function() {
 
             }
         },
-        "*Y*": {
+        "Y": {
             "Description": "Absolute or incremental position of Y axis",
             "Corollary info": "",
             "action": function() {
 
             }
         },
-        "*Z*": {
+        "Z": {
             "Description": "Absolute or incremental position of Z axis",
             "Corollary info": "The main spindle's axis of rotation often determines which axis of a machine tool is labeled as Z.",
             "action": function() {

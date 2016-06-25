@@ -1,5 +1,5 @@
-	this.parseGCode = function() {
-		gcode = document.getElementById('gcode').value.split('\n');
+	this.parseGCode = function(gcode) {
+		gcode = gcode.split('\n');
 
 		gcode.forEach(function(line) {
 			line = line.split(' ');
@@ -21,9 +21,13 @@
 						break;
 
 					case 'F':
+						letterAddresses.F.action(code.substring(1));
 						break;
 
 					case 'G':
+						if (code.length < 3) {
+							code = zeroPad(code);
+						}
 						if (! gcodes.hasOwnProperty(code)) {
 							console.log('Error: No such code as ' + code);
 						} else {
@@ -49,7 +53,15 @@
 						break;
 
 					case 'M':
-						console.log(code + ' is a mcode.');
+						if (code.length < 3) {
+							code = zeroPad(code);
+						}
+						if (! mcodes.hasOwnProperty(code)) {
+							console.log('Error: No such code as ' + code);
+						} else {
+							// console.log(code + ': ' + mcodes[code].Description);
+							mcodes[code].action(cleanComments(line));
+						}
 						break;
 
 					case 'N':

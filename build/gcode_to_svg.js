@@ -5,10 +5,125 @@ var gcode_to_svg = function(svgId) {
 	// circle.addClass('grid-major');
 
 	/*
+	Helper functions.
+	 */
+	
+	// Debug to command line
+	this.debugging = false;
+	function debug(value) {
+		if (this.debugging) {
+			console.log(value);
+		}
+	}
+	
+	function drawAxes() {
+			var x = s.line(0, visualOrigin.y, visualOrigin.x * 2, visualOrigin.y),
+				y = s.line(visualOrigin.x, 0, visualOrigin.x, visualOrigin.y * 2);
+	
+			x.addClass('grid-major');
+			y.addClass('grid-major');
+	}
+
+	// Move input values from svg origin to visual origin.
+	function translateToVisualOrigin(xyz) {
+		debug('Adjusting to visual origin: x=' + visualOrigin.x + ', y=' + visualOrigin.y);
+		for (key in xyz) {
+			switch (key) {
+				case 'x':
+					debug('\tMoving x coordinate from ' + xyz[key] + ' to ' + (xyz[key] + (visualOrigin.x)));
+					xyz[key] = xyz[key] + (visualOrigin.x);
+					break;
+				case 'y':
+					debug('\tMoving y coordinate from ' + xyz[key] + ' to ' + (xyz[key] + (visualOrigin.y)));
+					xyz[key] = xyz[key] + (visualOrigin.y);
+					break;
+			}
+		}
+
+		return xyz;
+	}
+	function translateToVisualOriginX(x) {
+		x = x + visualOrigin.x;
+		return x;
+	}
+	function translateToVisualOriginY(y) {
+		y = y + visualOrigin.y;
+		return y;
+	}
+
+	// Scale a value.
+	function scale(value) {
+		return value * scaleFactor;
+	}
+
+	// Clean comments from a line of input
+	function cleanComments(line) {
+		// console.log(typeof line, line.join(' '));
+		line = line.join(' ');
+		if (line.split(';').length > 1) {
+			line = line.split(';')[0];
+		}
+		line = line.split(' ');
+		// line.pop();
+
+		return line;
+	}
+
+	// Get clean XYZ coordinates from input.
+	function getXYZ(array) {
+		debug('Running getXYZ on ' + array);
+		var xyz = {};
+
+		// console.log(array);
+
+		for (var i = 0; i < array.length; i++) {
+			switch (array[i][0].toLowerCase()) {
+				case 'x':
+					xyz.x = scale(parseFloat(array[i].substring(1)));
+					debug('\tX was determined to be ' + xyz.x);
+					break;
+				case 'y':
+					xyz.y = scale(parseFloat(array[i].substring(1))) * -1;
+					debug('\tY was determined to be ' + xyz.y);
+					break;
+				case 'z':
+					xyz.z = scale(parseFloat(array[i].substring(1)));
+					debug('\tZ was determined to be ' + xyz.z);
+					break;
+			}
+		}
+
+		debug('\tTranslating the coordinates to the visual origin.');
+		debug('\tReturn values:')
+
+		return translateToVisualOrigin(xyz);
+	}
+
+	// Pad a code with a leading zero on its numeric component.
+	function zeroPad(value) {
+		var returnValue = value.substring(0, 1) + '0' + value.substring(1);
+		// console.log(returnValue);
+		return returnValue;
+	}
+
+	/*
 	Library variables, their getters, and their setters.
 	 */
 	
-	var scaleFactor = 1;
+	// console.log(svgId);
+	var visualOrigin = {
+		x: document.getElementById(svgId.substring(1)).clientWidth / 2,
+		y: document.getElementById(svgId.substring(1)).clientHeight / 2
+	}
+	this.getVisualOrigin = function() {
+		return visualOrigin;
+	}
+	this.setVisualOrigin = function(x, y) {
+		visualOrigin.x = x;
+		visualOrigin.y = y;
+	}
+	
+	var scaleFactor = 2;
 	this.getScaleFactor = function() {
 		return scaleFactor;
 	}
@@ -25,21 +140,36 @@ var gcode_to_svg = function(svgId) {
 	var getToolHeadPosition = function() {
 		return toolHeadPosition;
 	};
-	var setToolHeadPosition = function(xyz) {
+	function setToolHeadPosition(xyz) {
 		for (key in xyz) {
 			switch (key) {
 				case 'x':
-					toolHeadPosition.x = parseFloat(xyz[key]) * scaleFactor;
+					toolHeadPosition.x = xyz.x;
 					break;
 				case 'y':
-					toolHeadPosition.y = parseFloat(xyz[key]) * scaleFactor;
+					toolHeadPosition.y = xyz.y;
 					break;
 				case 'z':
-					toolHeadPosition.z = parseFloat(xyz[key]) * scaleFactor;
+					toolHeadPosition.z = xyz.z;
 					break;
 			}
 		}
 	};
+	function updateToolHeadPosition(xyz) {
+		for (key in xyz) {
+			switch (key) {
+				case 'x':
+					toolHeadPosition.x = xyz.x;
+					break;
+				case 'y':
+					toolHeadPosition.y = xyz.y;
+					break;
+				case 'z':
+					toolHeadPosition.z = xyz.z;
+					break;
+			}
+		}
+	}
 
 	// The units of measure.
 	var units = '';
@@ -93,105 +223,94 @@ var gcode_to_svg = function(svgId) {
 		spindleRotation = newSpindleRotation;
 	};
 
-	// Clean comments from a line of input
-	function cleanComments(line) {
-		// console.log(typeof line, line.join(' '));
-		line = line.join(' ');
-		if (line.split(';').length > 1) {
-			line = line.split(';')[0];
-		}
-		line = line.split(' ');
-		line.pop();
-
-		return line;
+	// The feed rate
+	var feedRate = 0;
+	this.getFeedRate = function() {
+		return feedRate;
+	}
+	this.setFeedRate = function(value) {
+		feedRate = value;
 	}
 
-	// Get clean XYZ coordinates from input.
-	function getXYZ(array) {
-		var xyz = {};
+	drawAxes();
 
-		for (var i = 0; i < array.length; i++) {
-			switch (array[i][0].toLowerCase()) {
-				case 'x':
-					xyz.x = parseFloat(array[i].substring(1, array[i].length)) * scaleFactor;
-					break;
-				case 'y':
-					xyz.y = parseFloat(array[i].substring(1, array[i].length)) * scaleFactor;
-					break;
-				case 'z':
-					xyz.z = parseFloat(array[i].substring(1, array[i].length)) * scaleFactor;
-					break;
-			}
-		}
-
-		return xyz;
-	}
     var gcodes = {
         "G00": {
             "Description": "Rapid positioning",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "On 2- or 3-axis moves, G00 (unlike G01) traditionally does not necessarily  move in a single straight line between start point and end point. It moves  each axis at its max speed until its vector quantity is achieved. Shorter  vector usually finishes first (given similar axis speeds). This matters  because it may yield a dog-leg or hockey-stick motion, which the programmer  needs to consider depending on what obstacles are nearby, to avoid a crash.  Some machines offer interpolated rapids as a feature for ease of  programming (safe to assume a straight line).",
             "action": function(line){
+                debug('Setting tool head position.');
                 setToolHeadPosition(getXYZ(line));
-                // console.log('Tool head position set.');
-                // console.log(getToolHeadPosition());
+                debug('Tool head position set:');
+                debug(getToolHeadPosition());
             }
         },
         "G01": {
             "Description": "Linear interpolation",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "The most common workhorse code for feeding during a cut. The program specs  the start and end points, and the control automatically calculates ( interpolates) the intermediate points to pass through that will yield a  straight line (hence \"linear\"). The control then calculates the angular  velocities at which to turn the axis leadscrews via their servomotors or  stepper motors. The computer performs thousands of calculations per second,  and the motors react quickly to each input. Thus the actual toolpath of the  machining takes place with the given feedrate on a path that is accurately  linear to within very small limits.",
             "action": function(line){
                 var destinationCoords = getXYZ(line);
-                // console.log('\tLinear interpolation from');
-                // console.log(toolHeadPosition);
-                // console.log('\tto');
-                // console.log(destinationCoords);
-                // console.log('');
+                // debug('\tLinear interpolation from');
+                debug(toolHeadPosition);
+                debug('\tto');
+                debug(destinationCoords);
+                debug('');
 
-                // console.log(toolHeadPosition.x, toolHeadPosition.y, destinationCoords.x, destinationCoords.y);
-                var line = s.line(toolHeadPosition.x, toolHeadPosition.y, destinationCoords.x, destinationCoords.y);
-                line.addClass('grid-major');
-
-                setToolHeadPosition(destinationCoords);
+                if (destinationCoords.hasOwnProperty('x') && destinationCoords.hasOwnProperty('y')) {
+                    debug(toolHeadPosition.x + ' ' + toolHeadPosition.y + ' ' + destinationCoords.x + ' ' + destinationCoords.y);
+                    var line = s.line(toolHeadPosition.x, toolHeadPosition.y, destinationCoords.x, destinationCoords.y);
+                    line.addClass('toolpath');
+                } else if (destinationCoords.hasOwnProperty('x') || ! destinationCoords.hasOwnProperty('y')) {
+                    debug(toolHeadPosition.x + ' ' + toolHeadPosition.y + ' ' + destinationCoords.x + ' ' + destinationCoords.y);
+                    var line = s.line(toolHeadPosition.x, toolHeadPosition.y, destinationCoords.x, toolHeadPosition.y);
+                    line.addClass('toolpath');
+                } else if (! destinationCoords.hasOwnProperty('x') || destinationCoords.hasOwnProperty('y')) {
+                    var line = s.line(toolHeadPosition.x, toolHeadPosition.y, toolHeadPosition.x, destinationCoords.y);
+                    line.addClass('toolpath');
+                }
+                updateToolHeadPosition(destinationCoords);
+                debug('\t\tTool head position set:');
+                debug(getToolHeadPosition());
             }
         },
         "G02": {
             "Description": "Circular interpolation, clockwise",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "Very similar in concept to G01. Again, the control interpolates  intermediate points and commands the servo- or stepper motors to rotate the  amount needed for the leadscrew to translate the motion to the correct tool  tip positioning. This process repeated thousands of times per minute  generates the desired toolpath. In the case of G02, the interpolation  generates a circle rather than a line. As with G01, the actual toolpath of  the machining takes place with the given feedrate on a path that accurately  matches the ideal (in G02's case, a circle) to within very small limits. In  fact, the interpolation is so precise (when all conditions are correct)  that milling an interpolated circle can obviate operations such as  drilling, and often even fine boring. *Addresses for radius or arc center:*  G02 and G03 take either an R address (for the radius desired on the part)  or IJK addresses (for the component vectors that define the vector from the  arc start point to the arc center point). *Cutter comp:* On most controls  you cannot start G41 or G42 in G02 or G03 modes. You must already have  compensated in an earlier G01 block. Often a short linear lead-in movement  will be programmed, merely to allow cutter compensation before the main  event, the circle-cutting, begins. *Full circles:* When the arc start point  and the arc end point are identical, a 360° arc, a full circle, will be  cut. (Some older controls cannot support this because arcs cannot cross  between quadrants of the cartesian system. Instead, four quarter-circle  arcs are programmed back-to-back.)",
             "action": function(line){
                 var centerPoint = getXYZ(line),
                     radiusRawParam = line[line.length - 1];
                     radius = letterAddresses[radiusRawParam[0]].action(radiusRawParam);
-                // console.log(line);
-                // console.log(centerPoint);
-                // console.log(radius);
+                // debug(line);
+                // debug(centerPoint);
+                // debug(radius);
             }
         },
         "G03": {
             "Description": "Circular interpolation, counterclockwise",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "Same corollary info as for G02.",
             "action": function(line){
                 var centerPoint = getXYZ(line),
                     radiusRawParam = line[line.length - 1];
                     radius = letterAddresses[radiusRawParam[0]].action(radiusRawParam);
 
-                var circle = s.circle(centerPoint.x, centerPoint.y, radius);
-                circle.addClass('grid-major');
-                // console.log(centerPoint);
-                // console.log(radius);
+                // var circle = s.circle(centerPoint.x, centerPoint.y, radius);
+                // circle.addClass('grid-major');
+                // debug(centerPoint);
+                // debug(radius);
             }
         },
         "G04": {
             "Description": "Dwell",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "Takes an address for dwell period (may be X, U, or P). The dwell period is  specified by a control parameter, typically set to milliseconds. Some  machines can accept either X1.0 (s) or P1000 (ms), which are equivalent. *Choosing  dwell duration*: Often the dwell needs only to last one or two full spindle  rotations. This is typically much less than one second. Be aware when  choosing a duration value that a long dwell is a waste of cycle time. In  some situations it won't matter, but for high-volume repetitive production  (over thousands of cycles), it is worth calculating that perhaps you only  need 100 ms, and you can call it 200 to be safe, but 1000 is just a waste  (too long).",
             "action": function(){
                 
@@ -199,8 +318,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G05 P10000": {
             "Description": "High-precision contour control (HPCC)",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "Uses a deep look-ahead buffer and simulation processing to provide better  axis movement acceleration and deceleration during contour milling",
             "action": function(){
                 
@@ -208,8 +327,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G05.1 Q1.": {
             "Description": "AI Advanced Preview Control",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "Uses a deep look-ahead buffer and simulation processing to provide better  axis movement acceleration and deceleration during contour milling",
             "action": function(){
                 
@@ -217,8 +336,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G06.1": {
             "Description": "Non-uniform rational B-spline (NURBS) Machining",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "Activates Non-Uniform Rational B Spline for complex curve and waveform  machining (this code is confirmed in Mazatrol 640M ISO Programming)",
             "action": function(){
                 
@@ -226,8 +345,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G07": {
             "Description": "Imaginary axis designation",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "",
             "action": function(){
                 
@@ -235,8 +354,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G09": {
             "Description": "Exact stop check, non-modal",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "The modal version is G61.",
             "action": function(){
                 
@@ -244,8 +363,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G10": {
             "Description": "Programmable data input",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "Modifies the value of work coordinate and tool offsets[6]",
                 "action": function(){
                     
@@ -253,8 +372,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G11": {
             "Description": "Data write cancel",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "",
             "action": function(){
                 
@@ -262,8 +381,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G12": {
             "Description": "Full-circle interpolation, clockwise",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "Fixed cycle for ease of programming 360° circular interpolation with  blend-radius lead-in and lead-out. Not standard on Fanuc controls.",
             "action": function(){
                 
@@ -271,8 +390,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G13": {
             "Description": "Full-circle interpolation, counterclockwise",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "Fixed cycle for ease of programming 360° circular interpolation with  blend-radius lead-in and lead-out. Not standard on Fanuc controls.",
             "action": function(){
                 
@@ -280,8 +399,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G17": {
             "Description": "XY plane selection",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "",
             "action": function(){
                 workPlane = 'XY';
@@ -289,8 +408,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G18": {
             "Description": "ZX plane selection",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "On most CNC lathes (built 1960s to 2000s), ZX is the only available plane,  so no G17 to G19 codes are used. This is now changing as the era begins in  which live tooling, multitask/multifunction, and mill-turn/turn-mill  gradually become the \"new normal\". But the simpler, traditional form factor  will probably not disappear—it will just move over to make room for the  newer configurations. See also V address.",
             "action": function(){
                 workPlane = 'ZX';
@@ -298,8 +417,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G19": {
             "Description": "YZ plane selection",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "",
             "action": function(){
                 workPlane = 'YZ';
@@ -307,8 +426,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G20": {
             "Description": "Programming in inches",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "Somewhat uncommon except in USA and (to lesser extent) Canada and UK.  However, in the global marketplace, competence with both G20 and G21 always  stands some chance of being necessary at any time. The usual minimum  increment in G20 is one ten-thousandth of an inch (0.0001\"), which is a  larger distance than the usual minimum increment in G21 (one thousandth of  a millimeter, .001 mm, that is, one micrometre). This physical difference  sometimes favors G21 programming.",
             "action": function(){
                 units = 'imperial';
@@ -316,8 +435,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G21": {
             "Description": "Programming in millimeters (mm)",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "Prevalent worldwide. However, in the global marketplace, competence with  both G20 and G21 always stands some chance of being necessary at any time.",
             "action": function(){
                 units = 'metric';
@@ -325,8 +444,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G28": {
             "Description": "Return to home position (machine zero, aka machine reference point)",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "Takes X Y Z addresses which define the intermediate point that the tool tip  will pass through on its way home to machine zero. They are in terms of  part zero (aka program zero), NOT machine zero.",
             "action": function(){
                 
@@ -334,8 +453,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G30": {
             "Description": "Return to secondary home position (machine zero, aka machine reference  point)",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "Takes a P address specifying *which* machine zero point is desired, *if*  the machine has several secondary points (P1 to P4). Takes X Y Z addresses  which define the intermediate point that the tool tip will pass through on  its way home to machine zero. They are in terms of part zero (aka program  zero), NOT machine zero.",
             "action": function(){
                 
@@ -343,8 +462,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G31": {
             "Description": "Skip function (used for probes and tool length measurement systems)",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "",
             "action": function(){
                 
@@ -352,8 +471,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G32": {
             "Description": "Single-point threading, longhand style (if not using a cycle, e.g., G76)",
-            "Milling ( M )": "",
-            "Turning ( T )": "T",
+            "Milling": false,
+            "Turning": true,
             "Corollary info": "Similar to G01 linear interpolation, except with automatic spindle  synchronization for single-point threading.",
             "action": function(){
                 
@@ -361,8 +480,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G33": {
             "Description": "Single-point threading, longhand style (if not using a cycle, e.g., G76)",
-            "Milling ( M )": "",
-            "Turning ( T )": "T",
+            "Milling": false,
+            "Turning": true,
             "Corollary info": "Some lathe controls assign this mode to G33 rather than G32.",
             "action": function(){
                 
@@ -370,8 +489,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G34": {
             "Description": "Variable-pitch threading",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "",
             "action": function(){
                 
@@ -379,8 +498,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G40": {
             "Description": "Tool radius compensation off",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "Turn off cutter radius compensation (CRC). Cancels G41 or G42.",
             "action": function(){
                 
@@ -388,8 +507,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G41": {
             "Description": "Tool radius compensation left",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "Turn on cutter radius compensation (CRC), left, for climb milling. *Milling:* Given righthand-helix cutter and M03 spindle direction, G41  corresponds to climb milling (down milling). Takes an address (D or H) that  calls an offset register value for radius. *Turning:* Often needs no D or H address on lathes, because whatever tool  is active automatically calls its geometry offsets with it. (Each turret  station is bound to its geometry offset register.)   G41 and G42 for milling has been partially automated and obviated (although  not completely) since CAM programming has become more common. CAM systems  allow the user to program as if with a zero-diameter cutter. The  fundamental concept of cutter radius compensation is still in play (i.e.,  that the surface produced will be distance R away from the cutter center),  but the programming mindset is different; the human does not choreograph  the toolpath with conscious, painstaking attention to G41, G42, and G40,  because the CAM software takes care of it. The software has various CRC  mode selections, such as *computer, control, wear, reverse wear, off*, some  of which do not use G41/G42 at all (good for roughing, or wide finish  tolerances), and others which use it so that the wear offset can still be  tweaked at the machine (better for tight finish tolerances).",
             "action": function(){
                 
@@ -397,8 +516,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G42": {
             "Description": "Tool radius compensation right",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "Turn on cutter radius compensation (CRC), right, for conventional milling.  Similar corollary info as for G41. Given righthand-helix cutter and M03  spindle direction, G42 corresponds to conventional milling (up milling).",
             "action": function(){
                 
@@ -406,8 +525,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G43": {
             "Description": "Tool height offset compensation negative",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "Takes an address, usually H, to call the tool length offset register value.  The value is *negative* because it will be *added* to the gauge line  position. G43 is the commonly used version (vs G44).",
             "action": function(){
                 
@@ -415,8 +534,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G44": {
             "Description": "Tool height offset compensation positive",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "Takes an address, usually H, to call the tool length offset register value.  The value is *positive* because it will be *subtracted* from the gauge line  position. G44 is the seldom-used version (vs G43).",
             "action": function(){
                 
@@ -424,8 +543,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G45": {
             "Description": "Axis offset single increase",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "",
             "action": function(){
                 
@@ -433,8 +552,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G46": {
             "Description": "Axis offset single decrease",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "",
             "action": function(){
                 
@@ -442,8 +561,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G47": {
             "Description": "Axis offset double increase",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "",
             "action": function(){
                 
@@ -451,8 +570,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G48": {
             "Description": "Axis offset double decrease",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "",
             "action": function(){
                 
@@ -460,8 +579,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G49": {
             "Description": "Tool length offset compensation cancel",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "Cancels G43 or G44.",
             "action": function(){
                 
@@ -469,8 +588,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G50": {
             "Description": "Position register (programming of vector from part zero to tool tip)",
-            "Milling ( M )": "",
-            "Turning ( T )": "T",
+            "Milling": false,
+            "Turning": true,
             "Corollary info": "Position register is one of the original methods to relate the part  (program) coordinate system to the tool position, which indirectly relates  it to the machine coordinate system, the only position the control really  \"knows\". Not commonly programmed anymore because G54 to G59 (WCSs) are a  better, newer method. Called via G50 for turning, G92 for milling. Those G  addresses also have alternate meanings (which see). Position register can  still be useful for datum shift programming. The \"manual absolute\" switch,  which has very few useful applications in WCS contexts, was more useful in  position register contexts, because it allowed the operator to move the  tool to a certain distance from the part (for example, by touching off a  2.0000\" gage) and then declare to the control what the distance-to-go shall  be (2.0000).",
             "action": function(){
                 
@@ -478,8 +597,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G52": {
             "Description": "Local coordinate system (LCS)",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "Temporarily shifts program zero to a new location. It is simply \"an offset  from an offset\", that is, an additional offset added onto the WCS offset.  This simplifies programming in some cases. The typical example is moving  from part to part in a multipart setup. With *G54* active, *G52 X140.0  Y170.0* shifts program zero 140 mm over in X and 170 mm over in Y. When the  part \"over there\" is done, *G52 X0 Y0* returns program zero to normal G54  (by reducing G52 offset to nothing). The same result can also be achieved  (1) using multiple WCS origins, G54/G55/G56/G57/G58/G59; (2) on newer  controls, G54.1 P1/P2/P3/etc. (all the way up to P48); or (3) using G10 for  programmable data input, in which the program can write new offset values  to the offset registers. Which method to use depends on shop-specific  application.",
             "action": function(){
                 
@@ -487,8 +606,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G53": {
             "Description": "Machine coordinate system",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "Takes absolute coordinates (X,Y,Z,A,B,C) with reference to machine zero  rather than program zero. Can be helpful for tool changes. Nonmodal and  absolute only. Subsequent blocks are interpreted as \"back to G54\" even if  it is not explicitly programmed.",
             "action": function(){
                 
@@ -496,8 +615,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G54 to G59": {
             "Description": "Work coordinate systems (WCSs)",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "Have largely replaced position register (G50 and G92). Each tuple of axis  offsets relates program zero directly to machine zero. Standard is 6 tuples  (G54 to G59), with optional extensibility to 48 more via G54.1 P1 to P48.",
             "action": function(){
                 
@@ -505,8 +624,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G54.1 P1 to P48": {
             "Description": "Extended work coordinate systems",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "Up to 48 more WCSs besides the 6 provided as standard by G54 to G59. Note  floating-point extension of G-code data type (formerly all integers). Other  examples have also evolved (e.g., G84.2). Modern controls have the hardware  to handle it.",
             "action": function(){
                 
@@ -514,8 +633,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G61": {
             "Description": "Exact stop check, modal",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "Can be canceled with G64. The non-modal version is G09.",
             "action": function(){
                 
@@ -523,8 +642,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G62": {
             "Description": "Automatic corner override",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "",
             "action": function(){
                 
@@ -532,8 +651,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G64": {
             "Description": "Default cutting mode (cancel exact stop check mode)",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "Cancels G61.",
             "action": function(){
                 
@@ -541,8 +660,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G70": {
             "Description": "Fixed cycle, multiple repetitive cycle, for finishing (including contours)",
-            "Milling ( M )": "",
-            "Turning ( T )": "T",
+            "Milling": false,
+            "Turning": true,
             "Corollary info": "",
             "action": function(){
                 
@@ -550,8 +669,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G71": {
             "Description": "Fixed cycle, multiple repetitive cycle, for roughing (Z-axis emphasis)",
-            "Milling ( M )": "",
-            "Turning ( T )": "T",
+            "Milling": false,
+            "Turning": true,
             "Corollary info": "",
             "action": function(){
                 
@@ -559,8 +678,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G72": {
             "Description": "Fixed cycle, multiple repetitive cycle, for roughing (X-axis emphasis)",
-            "Milling ( M )": "",
-            "Turning ( T )": "T",
+            "Milling": false,
+            "Turning": true,
             "Corollary info": "",
             "action": function(){
                 
@@ -568,8 +687,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G73": {
             "Description": "Peck drilling cycle for milling – high-speed (NO full retraction from pecks)",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "Retracts only as far as a clearance increment (system parameter). For when  chipbreaking is the main concern, but chip clogging of flutes is not.  Compare G83.",
             "action": function(){
                 
@@ -577,8 +696,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G74": {
             "Description": "Tapping cycle for milling, lefthand thread, M04 spindle direction",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "See notes at G84.",
             "action": function(){
                 
@@ -586,8 +705,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G75": {
             "Description": "Peck grooving cycle for turning",
-            "Milling ( M )": "",
-            "Turning ( T )": "T",
+            "Milling": false,
+            "Turning": true,
             "Corollary info": "",
             "action": function(){
                 
@@ -595,8 +714,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G76": {
             "Description": "Threading cycle for turning, multiple repetitive cycle",
-            "Milling ( M )": "",
-            "Turning ( T )": "T",
+            "Milling": false,
+            "Turning": true,
             "Corollary info": "",
             "action": function(){
                 
@@ -604,8 +723,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G80": {
             "Description": "Cancel canned cycle",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "*Milling:* Cancels all cycles such as G73, G81, G83, etc. Z-axis returns  either to Z-initial level or R level, as programmed (G98 or G99,  respectively). *Turning:* Usually not needed on lathes, because a new group-1 G address ( G00 to G03) cancels whatever cycle was active.",
             "action": function(){
                 
@@ -613,8 +732,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G81": {
             "Description": "Simple drilling cycle",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "No dwell built in",
             "action": function(){
                 
@@ -622,8 +741,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G82": {
             "Description": "Drilling cycle with dwell",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "Dwells at hole bottom (Z-depth) for the number of milliseconds specified by  the P address. Good for when hole bottom finish matters. Good for spot  drilling because the divot will be certain to clean up evenly. Consider the  \"choosing dwell duration\" note at G04.",
             "action": function(){
                 
@@ -631,8 +750,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G83": {
             "Description": "Peck drilling cycle (full retraction from pecks)",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "Returns to R-level after each peck. Good for clearing flutes of chips.  Compare G73.",
             "action": function(){
                 
@@ -640,8 +759,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G84": {
             "Description": "Tapping cycle, righthand thread, M03 spindle direction",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "G74 and G84 are the righthand and lefthand \"pair\" for old-school tapping  with a non-rigid toolholder (\"tapping head\" style). Compare the rigid  tapping \"pair\", G84.2 and G84.3.",
             "action": function(){
                 
@@ -649,8 +768,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G84.2": {
             "Description": "Tapping cycle, righthand thread, M03 spindle direction, rigid toolholder",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "See notes at G84. Rigid tapping synchronizes speed and feed according to  the desired thread helix. That is, it synchronizes degrees of spindle  rotation with microns of axial travel. Therefore it can use a rigid  toolholder to hold the tap. This feature is not available on old machines  or newer low-end machines, which must use \"tapping head\" motion (G74/G84).",
             "action": function(){
                 
@@ -658,8 +777,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G84.3": {
             "Description": "Tapping cycle, lefthand thread, M04 spindle direction, rigid toolholder",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "See notes at G84 and G84.2.",
             "action": function(){
                 
@@ -667,8 +786,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G85": {
             "Description": "boring cycle, feed in/feed out",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "- Good cycle for a reamer.    - In some cases good for single-point boring tool, although in other     cases the lack of depth of cut on the way back out is bad for surface     finish, in which case, G76 (OSS/shift) can be used instead.    - If need dwell at hole bottom, see G89.",
             "action": function(){
                 
@@ -676,8 +795,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G86": {
             "Description": "boring cycle, feed in/spindle stop/rapid out",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "Boring tool will leave a slight score mark on the way back out. Appropriate  cycle for some applications; for others, G76 (OSS/shift) can be used  instead.",
             "action": function(){
                 
@@ -685,8 +804,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G87": {
             "Description": "boring cycle, backboring",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "For backboring. Returns to initial level only (G98); this cycle cannot use  G99 because its R level is on the far side of the part, away from the  spindle headstock.",
             "action": function(){
                 
@@ -694,8 +813,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G88": {
             "Description": "boring cycle, feed in/spindle stop/manual operation",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "",
             "action": function(){
                 
@@ -703,8 +822,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G89": {
             "Description": "boring cycle, feed in/dwell/feed out",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "G89 is like G85 but with dwell added at bottom of hole.",
             "action": function(){
                 
@@ -712,8 +831,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G90": {
             "Description": "Fixed cycle, simple cycle, for roughing (Z-axis emphasis)",
-            "Milling ( M )": "",
-            "Turning ( T )": "T (A)",
+            "Milling": false,
+            "Turning": "T (A)",
             "Corollary info": "When not serving for absolute programming (above)",
             "action": function(){
                 
@@ -721,8 +840,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G91": {
             "Description": "Incremental programming",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T (B)",
+            "Milling": true,
+            "Turning": "T (B)",
             "Corollary info": "Positioning defined with reference to previous position. *Milling:* Always as above. *Turning:* Sometimes as above (Fanuc group type B and similarly designed),  but on most lathes (Fanuc group type A and similarly designed), G90/G91 are  not used for absolute/incremental modes. Instead, U and W are the  incremental addresses and X and Z are the absolute addresses. On these  lathes, G90 is a fixed cycle address for roughing.",
             "action": function(){
                 
@@ -730,8 +849,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G92": {
             "Description": "Threading cycle, simple cycle",
-            "Milling ( M )": "",
-            "Turning ( T )": "T (A)",
+            "Milling": false,
+            "Turning": "T (A)",
             "Corollary info": "",
             "action": function(){
                 
@@ -739,8 +858,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G94": {
             "Description": "Fixed cycle, simple cycle, for roughing (X-axis emphasis)",
-            "Milling ( M )": "",
-            "Turning ( T )": "T (A)",
+            "Milling": false,
+            "Turning": "T (A)",
             "Corollary info": "When not serving for feedrate per minute (above)",
             "action": function(){
                 
@@ -748,8 +867,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G95": {
             "Description": "Feedrate per revolution",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T (B)",
+            "Milling": true,
+            "Turning": "T (B)",
             "Corollary info": "On group type A lathes, feedrate per revolution is G99.",
             "action": function(){
                 
@@ -757,8 +876,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G96": {
             "Description": "Constant surface speed (CSS)",
-            "Milling ( M )": "",
-            "Turning ( T )": "T",
+            "Milling": false,
+            "Turning": true,
             "Corollary info": "Varies spindle speed automatically to achieve a constant surface speed. See speeds  and feeds. Takes an S address integer, which is interpreted as sfm in G20  mode or as m/min in G21 mode.",
             "action": function(){
                 
@@ -766,8 +885,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G97": {
             "Description": "Constant spindle speed",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "Takes an S address integer, which is interpreted as rev/min (rpm). The  default speed mode per system parameter if no mode is programmed.",
             "action": function(){
                 
@@ -775,8 +894,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G98": {
             "Description": "Feedrate per minute (group type A)",
-            "Milling ( M )": "",
-            "Turning ( T )": "T (A)",
+            "Milling": false,
+            "Turning": "T (A)",
             "Corollary info": "Feedrate per minute is G94 on group type B.",
             "action": function(){
                 
@@ -784,8 +903,8 @@ var gcode_to_svg = function(svgId) {
         },
         "G99": {
             "Description": "Feedrate per revolution (group type A)",
-            "Milling ( M )": "",
-            "Turning ( T )": "T (A)",
+            "Milling": false,
+            "Turning": "T (A)",
             "Corollary info": "Feedrate per revolution is G95 on group type B.",
             "action": function(){
                 
@@ -796,8 +915,8 @@ var gcode_to_svg = function(svgId) {
     var mcodes = {
         "M00": {
             "Description": "Compulsory stop",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "Non-optional—machine will always stop upon reaching M00 in the program  execution.",
             'action': function() {
                 
@@ -805,8 +924,8 @@ var gcode_to_svg = function(svgId) {
         },
         "M01": {
             "Description": "Optional stop",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "Machine will only stop at M01 if operator has pushed the optional stop  button.",
             'action': function() {
                 
@@ -814,8 +933,8 @@ var gcode_to_svg = function(svgId) {
         },
         "M02": {
             "Description": "End of program",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "Program ends; execution may or may not return to program top (depending on  the control); may or may not reset register values. M02 was the original  program-end code, now considered obsolete, but still supported for backward  compatibility.[7] Many modern controls treat M02 as equivalent to M30.[7]  See M30 for additional discussion of control status upon executing M02 or  M30.",
             'action': function() {
                 
@@ -823,8 +942,8 @@ var gcode_to_svg = function(svgId) {
         },
         "M03": {
             "Description": "Spindle on (clockwise rotation)",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "The speed of the spindle is determined by the address S, in either revolutions  per minute (G97 mode; default) or surface feet per minute or [surface]  meters per minute (G96 mode [CSS] under either G20 or G21). The right-hand  rule can be used to determine which direction is clockwise and which  direction is counter-clockwise.   Right-hand-helix screws moving in the tightening direction (and  right-hand-helix flutes spinning in the cutting direction) are defined as  moving in the M03 direction, and are labeled \"clockwise\" by convention. The  M03 direction is always M03 regardless of local vantage point and local  CW/CCW distinction.",
             'action': function() {
                 spindleRotation = 'clockwise';
@@ -832,8 +951,8 @@ var gcode_to_svg = function(svgId) {
         },
         "M04": {
             "Description": "Spindle on (counterclockwise rotation)",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "See comment above at M03.",
             'action': function() {
                 spindleRotation = 'counterclockwise';
@@ -841,8 +960,8 @@ var gcode_to_svg = function(svgId) {
         },
         "M05": {
             "Description": "Spindle stop",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "",
             'action': function() {
                 spindleState = 'off';
@@ -850,8 +969,8 @@ var gcode_to_svg = function(svgId) {
         },
         "M06": {
             "Description": "Automatic tool change (ATC)",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T (some-times)",
+            "Milling": true,
+            "Turning": "T (some-times)",
             "Corollary info": "Many lathes do not use M06 because the T address itself indexes the turret. Programming on any particular machine tool requires knowing which method  that machine uses. To understand how the T address works and how it  interacts (or not) with M06, one must study the various methods, such as  lathe turret programming, ATC fixed tool selection, ATC random memory tool  selection, the concept of \"next tool waiting\", and empty tools. These  concepts are taught in textbooks such as Smid,[3] and online multimedia  (videos, simulators, etc.); all of these teaching resources are usually  paywalled to pay back the costs of their development. They are used in  training classes for operators, both on-site and remotely (e.g., Tooling  University).",
             'action': function() {
                 
@@ -859,8 +978,8 @@ var gcode_to_svg = function(svgId) {
         },
         "M07": {
             "Description": "Coolant on (mist)",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "",
             'action': function() {
                 coolantState = 'mist';
@@ -868,8 +987,8 @@ var gcode_to_svg = function(svgId) {
         },
         "M08": {
             "Description": "Coolant on (flood)",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "",
             'action': function() {
                 coolantState = 'flood';
@@ -877,8 +996,8 @@ var gcode_to_svg = function(svgId) {
         },
         "M09": {
             "Description": "Coolant off",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "",
             'action': function() {
                 coolantState = 'off';
@@ -886,8 +1005,8 @@ var gcode_to_svg = function(svgId) {
         },
         "M10": {
             "Description": "Pallet clamp on",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "For machining centers with pallet changers",
             'action': function() {
                 palletClampState = 'on';
@@ -895,8 +1014,8 @@ var gcode_to_svg = function(svgId) {
         },
         "M11": {
             "Description": "Pallet clamp off",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "For machining centers with pallet changers",
             'action': function() {
                 palletClampState = off;
@@ -904,8 +1023,8 @@ var gcode_to_svg = function(svgId) {
         },
         "M13": {
             "Description": "Spindle on (clockwise rotation) and coolant on (flood)",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "This one M-code does the work of both M03 and M08. It is not unusual for  specific machine models to have such combined commands, which make for  shorter, more quickly written programs.",
             'action': function() {
                 spindleState = 'on';
@@ -915,8 +1034,8 @@ var gcode_to_svg = function(svgId) {
         },
         "M19": {
             "Description": "Spindle orientation",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "Spindle orientation is more often called within cycles (automatically) or  during setup (manually), but it is also available under program control via  *M19*. The abbreviation OSS (oriented spindle stop) may be seen in  reference to an oriented stop within cycles.   The relevance of spindle orientation has increased as technology has  advanced. Although 4- and 5-axis contour milling and CNC single-pointing  have depended on spindle position encoders for decades, before the advent  of widespread live tooling and mill-turn/turn-mill systems, it was seldom  relevant in \"regular\" (non-\"special\") machining for the operator (as  opposed to the machine) to know the angular orientation of a spindle except  for within a few restricted contexts (such as tool change, or G76 fine  boring cycles with choreographed tool retraction). Most milling of features  indexed around a turned workpiece was accomplished with separate operations  on indexing head setups; in a sense, indexing heads were invented as  separate pieces of equipment, to be used in separate operations, which  could provide precise spindle orientation in a world where it otherwise  mostly didn't exist (and didn't need to). But as CAD/CAM and multiaxis CNC  machining with multiple rotary-cutter axes becomes the norm, even for  \"regular\" (non-\"special\") applications, machinists now frequently care  about stepping just about *any* spindle through its 360° with precision.",
             'action': function() {
                 
@@ -924,8 +1043,8 @@ var gcode_to_svg = function(svgId) {
         },
         "M21": {
             "Description": "Tailstock forward",
-            "Milling ( M )": "",
-            "Turning ( T )": "T",
+            "Milling": false,
+            "Turning": true,
             "Corollary info": "",
             'action': function() {
                 
@@ -933,8 +1052,8 @@ var gcode_to_svg = function(svgId) {
         },
         "M22": {
             "Description": "Tailstock backward",
-            "Milling ( M )": "",
-            "Turning ( T )": "T",
+            "Milling": false,
+            "Turning": true,
             "Corollary info": "",
             'action': function() {
                 
@@ -942,8 +1061,8 @@ var gcode_to_svg = function(svgId) {
         },
         "M23": {
             "Description": "Thread gradual pullout ON",
-            "Milling ( M )": "",
-            "Turning ( T )": "T",
+            "Milling": false,
+            "Turning": true,
             "Corollary info": "",
             'action': function() {
                 
@@ -951,8 +1070,8 @@ var gcode_to_svg = function(svgId) {
         },
         "M24": {
             "Description": "Thread gradual pullout OFF",
-            "Milling ( M )": "",
-            "Turning ( T )": "T",
+            "Milling": false,
+            "Turning": true,
             "Corollary info": "",
             'action': function() {
                 
@@ -960,8 +1079,8 @@ var gcode_to_svg = function(svgId) {
         },
         "M30": {
             "Description": "End of program, with return to program top",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "Today M30 is considered the standard program-end code, and will return  execution to the top of the program. Today most controls also still support  the original program-end code, M02, usually by treating it as equivalent to  M30. *Additional info:* Compare M02 with M30. First, M02 was created, in  the days when the punched tape was expected to be short enough to be  spliced into a continuous loop (which is why on old controls, M02 triggered  no tape rewinding).[7] The other program-end code, M30, was added later to  accommodate longer punched tapes, which were wound on a reel and thus  needed rewinding before another cycle could start.[7] On many newer  controls, there is no longer a difference in how the codes are  executed—both act like M30.",
             'action': function() {
                 
@@ -969,8 +1088,8 @@ var gcode_to_svg = function(svgId) {
         },
         "M41": {
             "Description": "Gear select – gear 1",
-            "Milling ( M )": "",
-            "Turning ( T )": "T",
+            "Milling": false,
+            "Turning": true,
             "Corollary info": "",
             'action': function() {
                 
@@ -978,8 +1097,8 @@ var gcode_to_svg = function(svgId) {
         },
         "M42": {
             "Description": "Gear select – gear 2",
-            "Milling ( M )": "",
-            "Turning ( T )": "T",
+            "Milling": false,
+            "Turning": true,
             "Corollary info": "",
             'action': function() {
                 
@@ -987,8 +1106,8 @@ var gcode_to_svg = function(svgId) {
         },
         "M43": {
             "Description": "Gear select – gear 3",
-            "Milling ( M )": "",
-            "Turning ( T )": "T",
+            "Milling": false,
+            "Turning": true,
             "Corollary info": "",
             'action': function() {
                 
@@ -996,8 +1115,8 @@ var gcode_to_svg = function(svgId) {
         },
         "M44": {
             "Description": "Gear select – gear 4",
-            "Milling ( M )": "",
-            "Turning ( T )": "T",
+            "Milling": false,
+            "Turning": true,
             "Corollary info": "",
             'action': function() {
                 
@@ -1005,8 +1124,8 @@ var gcode_to_svg = function(svgId) {
         },
         "M48": {
             "Description": "Feedrate override allowed",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "",
             'action': function() {
                 
@@ -1014,8 +1133,8 @@ var gcode_to_svg = function(svgId) {
         },
         "M49": {
             "Description": "Feedrate override NOT allowed",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "Prevent MFO. This rule is also usually called (automatically) within  tapping cycles or single-point threading cycles, where feed is precisely  correlated to speed. Same with spindle speed override (SSO) and feed hold  button. Some controls are capable of providing SSO and MFO during threading.",
             'action': function() {
                 
@@ -1023,8 +1142,8 @@ var gcode_to_svg = function(svgId) {
         },
         "M52": {
             "Description": "Unload Last tool from spindle",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "Also empty spindle.",
             'action': function() {
                 
@@ -1032,8 +1151,8 @@ var gcode_to_svg = function(svgId) {
         },
         "M60": {
             "Description": "Automatic pallet change (APC)",
-            "Milling ( M )": "M",
-            "Turning ( T )": "",
+            "Milling": true,
+            "Turning": false,
             "Corollary info": "For machining centers with pallet changers",
             'action': function() {
                 
@@ -1041,8 +1160,8 @@ var gcode_to_svg = function(svgId) {
         },
         "M98": {
             "Description": "Subprogram call",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "Takes an address P to specify which subprogram to call, for example, \"M98  P8979\" calls subprogram O8979.",
             'action': function() {
                 
@@ -1050,8 +1169,8 @@ var gcode_to_svg = function(svgId) {
         },
         "M99": {
             "Description": "Subprogram end",
-            "Milling ( M )": "M",
-            "Turning ( T )": "T",
+            "Milling": true,
+            "Turning": true,
             "Corollary info": "Usually placed at end of subprogram, where it returns execution control to  the main program. The default is that control returns to the block  following the M98 call in the main program. Return to a different block  number can be specified by a P address. M99 can also be used in main  program with block skip for endless loop of main program on bar work on  lathes (until operator toggles block skip).",
             'action': function() {
                 
@@ -1098,11 +1217,12 @@ var gcode_to_svg = function(svgId) {
         "F": {
             "Description": "Defines feed rate",
             "Corollary info": "Common units are distance per time for mills (inches per minute, IPM, or millimeters per minute, mm/min) and distance per revolution for lathes (inches per revolution, IPR, or millimeters per revolution, mm/rev)",
-            "action": function() {
-
+            "action": function(value) {
+                feedRate = scale(parseFloat(value));
+                // console.log('Feedrate set to ' + feedRate);
             }
         },
-        "*G*": {
+        "G": {
             "Description": "Address for preparatory commands",
             "Corollary info": "G commands often tell the control what kind of motion is wanted (e.g., rapid positioning, linear feed, circular feed, fixed cycle) or what offset value to use.",
             "action": function() {
@@ -1120,14 +1240,14 @@ var gcode_to_svg = function(svgId) {
             "Description": "Defines arc center in X axis for G02 or G03 arc commands. Also used as a parameter within some fixed cycles.",
             "Corollary info": "",
             "action": function(code) {
-                return parseFloat(code.substring(1, code.length)) * scaleFactor;
+                return scale(parseFloat(code.substring(1, code.length)));
             }
         },
         "J": {
             "Description": "Defines arc center in Y axis for G02 or G03 arc commands. Also used as a parameter within some fixed cycles.",
             "Corollary info": "",
             "action": function(code) {
-                return parseFloat(code.substring(1, code.length)) * scaleFactor;
+                return scale(parseFloat(code.substring(1, code.length)));
             }
         },
         "K": {
@@ -1144,7 +1264,7 @@ var gcode_to_svg = function(svgId) {
 
             }
         },
-        "*M*": {
+        "M": {
             "Description": "Miscellaneous function",
             "Corollary info": "Action code, auxiliary command; descriptions vary. Many M-codes call for machine functions, which is why people often say that the \"M\" stands for \"machine\", although it was not intended to.",
             "action": function() {
@@ -1221,21 +1341,21 @@ var gcode_to_svg = function(svgId) {
 
             }
         },
-        "*X*": {
+        "X": {
             "Description": "Absolute or incremental position of X axis. Also defines dwell time on some machines (instead of \"P\" or \"U\").",
             "Corollary info": "",
             "action": function() {
 
             }
         },
-        "*Y*": {
+        "Y": {
             "Description": "Absolute or incremental position of Y axis",
             "Corollary info": "",
             "action": function() {
 
             }
         },
-        "*Z*": {
+        "Z": {
             "Description": "Absolute or incremental position of Z axis",
             "Corollary info": "The main spindle's axis of rotation often determines which axis of a machine tool is labeled as Z.",
             "action": function() {
@@ -1243,8 +1363,8 @@ var gcode_to_svg = function(svgId) {
             }
         }
     };
-	this.parseGCode = function() {
-		gcode = document.getElementById('gcode').value.split('\n');
+	this.parseGCode = function(gcode) {
+		gcode = gcode.split('\n');
 
 		gcode.forEach(function(line) {
 			line = line.split(' ');
@@ -1266,9 +1386,13 @@ var gcode_to_svg = function(svgId) {
 						break;
 
 					case 'F':
+						letterAddresses.F.action(code.substring(1));
 						break;
 
 					case 'G':
+						if (code.length < 3) {
+							code = zeroPad(code);
+						}
 						if (! gcodes.hasOwnProperty(code)) {
 							console.log('Error: No such code as ' + code);
 						} else {
@@ -1294,7 +1418,15 @@ var gcode_to_svg = function(svgId) {
 						break;
 
 					case 'M':
-						console.log(code + ' is a mcode.');
+						if (code.length < 3) {
+							code = zeroPad(code);
+						}
+						if (! mcodes.hasOwnProperty(code)) {
+							console.log('Error: No such code as ' + code);
+						} else {
+							// console.log(code + ': ' + mcodes[code].Description);
+							mcodes[code].action(cleanComments(line));
+						}
 						break;
 
 					case 'N':

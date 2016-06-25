@@ -1,7 +1,24 @@
-var drawSVG = new gcode_to_svg('#svg'),
-	s = Snap('#svg'),
-	gcode = '';
+var s = Snap('#svg');
 
-document.getElementById('generate').onclick = function() {
-	drawSVG.parseGCode();
-};
+var editor = CodeMirror.fromTextArea(document.getElementById('gcode'), {
+	lineNumbers: true
+});
+
+drawSVG = new gcode_to_svg('#svg');
+
+$(document).ready(function() {
+	$('#scale').val(drawSVG.getScaleFactor());
+
+	$('#generate').click(function() {
+		drawSVG.parseGCode(editor.getValue());
+	});
+
+	$('#clear').click(function(){
+		$('.toolpath').remove();
+	});
+
+	$('#update-scale').click(function() {
+		drawSVG.setScaleFactor($('#scale').val());
+		$('#scale').val(drawSVG.getScaleFactor());
+	});
+});
