@@ -9,6 +9,8 @@ drawSVG = new gcode_to_svg('#svg');
 $(document).ready(function() {
 	$('#scale').val(drawSVG.getScaleFactor());
 
+	$('.container').draggable();
+
 	$('#generate').click(function() {
 		drawSVG.parseGCode(editor.getValue());
 	});

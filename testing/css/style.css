@@ -1,17 +1,19 @@
 .container {
-	max-width: 1200px;
-	margin-left: auto;
-	margin-right: auto;
+	width: 30rem;
+	position: absolute;
+	background-color: rgba(252, 255, 245, 0.85);
+	padding: 0.5rem;
+	border: 1px solid black;
 }
 
 svg {
 	background-color: #fafafa;
-	height: 40rem;
+	height: 100%;
 	width: 100%;
 }
 
 .grid-major {
-	stroke-width: 2px;
+	stroke-width: 3px;
 	stroke: rgba(25, 52, 65, 0.25);
 	fill: none;
 }

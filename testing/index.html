@@ -9,14 +9,14 @@
 </head>
 <body>
 	<div class="container">
-		<div class="title">GCode to SVG</div>
 		<div class="row">
-			<div class="column medium-3 gcode-entry">
-				<textarea id="gcode"></textarea>
+			<div class="column">
+				<div class="title">GCode to SVG</div>
 			</div>
-			<div class="column medium-9 svg">
-				<svg id="svg" xmlns="http://www.w3.org/2000/svg">
-				</svg>
+		</div>
+		<div class="row">
+			<div class="column gcode-entry">
+				<textarea id="gcode"></textarea>
 			</div>
 		</div>
 		<div class="row">
@@ -26,6 +26,8 @@
 						<button class="button success" id="generate">Plot Tool Paths</button>
 						<button class="button alert" id="clear">Clear</button>
 					</div>
+				</div>
+				<div class="input-group">
 					<span class="input-group-label">Current Scale Factor</span>
 					<input type="text" class="input-group-field" id="scale">
 					<div class="input-group-button">
@@ -35,7 +37,10 @@
 			</div>
 		</div>
 	</div>
+	<svg id="svg" xmlns="http://www.w3.org/2000/svg">
+	</svg>
 	<script src="../node_modules/jquery/dist/jquery.min.js"></script>
+	<script src="../node_modules/jqueryui-browser/ui/jquery-ui.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/codemirror.min.js"></script>
 	<script src="../node_modules/snapsvg/dist/snap.svg-min.js"></script>
 	<script src="../build/gcode_to_svg.js"></script>
